@@ -118,10 +118,10 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                var rep = _context.Reparacios.Where(x => x.IdReparacio == reparacio.IdReparacio).FirstOrDefaultAsync();
+                var rep = await _context.Reparacios.FindAsync(reparacio.IdReparacio);
                 if (rep == null)
                 {
-                    _context.Add(reparacio);
+                    _context.Reparacios.Add(reparacio);
                     await _context.SaveChangesAsync();
                     return Ok(new { Message = "Reparació afegida correctament" });
                 }

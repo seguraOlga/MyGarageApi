@@ -135,7 +135,7 @@ namespace MyGarageApi.Controllers
             try
             {
                 var producteDB = _context.Productes.Where(x => x.RefPeca == producte.RefPeca).FirstOrDefault();
-                if (producteDB.RefPeca != null)
+                if (producteDB.RefPeca == null)
                 {
                     _context.Productes.Add(producte);
                     await _context.SaveChangesAsync();

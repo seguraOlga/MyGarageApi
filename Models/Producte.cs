@@ -19,7 +19,7 @@ public partial class Producte
 
     public int? Quantitat { get; set; }
 
-    public byte[]? Imatge { get; set; }
+    public string? Imatge { get; set; }
 
     public virtual ICollection<MaterialReparacio> MaterialReparacios { get; set; } = new List<MaterialReparacio>();
 }

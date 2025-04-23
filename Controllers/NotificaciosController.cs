@@ -58,6 +58,7 @@ namespace MyGarageApi.Controllers
         {
             try
             {
+                
                 _context.Notificacios.Add(notificacio);
                 await _context.SaveChangesAsync();
 

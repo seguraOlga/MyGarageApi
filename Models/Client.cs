@@ -7,7 +7,7 @@ public partial class Client
 {
     public string Dni { get; set; } = null!;
 
-    public string? Nom { get; set; }
+    public string Nom { get; set; }
 
     public string? Cognoms { get; set; }
 

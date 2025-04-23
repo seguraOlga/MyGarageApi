@@ -43,7 +43,35 @@ namespace MyGarageApi.Controllers
             return cotxe;
         }
 
-    
+
+
+        //COCHES POR MARCA 
+        [Route("api/CotxesMarca/{marca}")]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<List<Cotxe>>>> GetCotxesPerMarca(string marca)
+        {
+           
+            try
+            {
+                var cotxes = _context.Cotxes.Where(x => x.Marca == marca).ToList();
+
+                if(cotxes!= null)
+                {
+                    return Ok(cotxes);
+                }
+                else
+                {
+                    return NotFound(new { Message = "Aquesta Marca no te cotxes regisrats" }); 
+                }
+
+
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new { Message = e.Message });
+            }
+
+        }
 
         //COCHES POR ESTADO 
         [Route("api/Cotxes/Estats")]
@@ -72,6 +100,65 @@ namespace MyGarageApi.Controllers
             }
 
         }
+
+            //SUBIR FOTO COCHE A LA API DEVUELVE EL FILENAME
+        [Route("api/Cotxes/penjarFoto")]
+        [HttpPost]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> PenjarFoto([FromForm] UploadImageRequest request)
+        {
+            var file = request.File;
+
+            if (file == null || file.Length == 0)
+                return BadRequest("No s'ha seleccionat cap imatge.");
+
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+
+            var wwwRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var imagesPath = Path.Combine(wwwRootPath, "Imatges");
+
+            if (!Directory.Exists(imagesPath))
+                Directory.CreateDirectory(imagesPath);
+
+            var fullPath = Path.Combine(imagesPath, fileName);
+
+            using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            //var imageUrl =fileName;
+            return Ok(new { fileName = fileName });
+            //return Ok(fileName); 
+        }
+
+
+            //BUSCAR IMAGEN COCHE EN LA API
+        [Route("api/Cotxes/getFoto/{fileName}")]
+        [HttpGet]
+        public IActionResult GetFoto(string fileName)
+        {
+            if (string.IsNullOrEmpty(fileName))
+                return BadRequest("El nom del fitxer és necessari.");
+
+            var path = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Imatges", fileName);
+
+            if (!System.IO.File.Exists(path))
+                return NotFound("Fitxer no trobat.");
+
+            var image = System.IO.File.OpenRead(path);
+            var ext = Path.GetExtension(path).ToLowerInvariant();
+            var mimeType = ext switch
+            {
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                ".gif" => "image/gif",
+                _ => "application/octet-stream"
+            };
+
+            return File(image, mimeType);
+        }
+
 
 
 
@@ -106,18 +193,28 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                var cotxes = _context.Cotxes.Where(x => x.Matricula == cotxe.Matricula).ToList();
-                if (cotxes == null)
+                if (cotxe != null)
                 {
-                   _context.Cotxes.Add(cotxe);
-                    await _context.SaveChangesAsync();
+
+
+                    var cotxes = _context.Cotxes.Where(x => x.Matricula == cotxe.Matricula).ToList();
+                    if (await _context.Cotxes.FindAsync(cotxe.Matricula) == null)
+                    {
+                        _context.Cotxes.Add(cotxe);
+                        await _context.SaveChangesAsync();
+                        return Ok(new { Message = "Cotxe afegir correctamente" });
+                    }
+                    else
+                    {
+                        return NotFound(new { Message = "Aquesta matricula ja existeix, un cotxe no pot tenir dos prpietaris " });
+                    }
                 }
                 else
                 {
-                    return NotFound(new { Message = "Aquesta matricula ja existeix, un cotxe no pot tenir dos prpietaris " });
+                    return BadRequest(new { Message = "El cotxe rebut es null" }); 
                 }
 
-                    return NoContent();
+
             }catch(Exception e)
             {
                 return BadRequest(new { Message = e.Message }); 

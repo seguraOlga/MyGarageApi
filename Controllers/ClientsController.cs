@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyGarageApi.Models;
 using BCrypt.Net;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 
 namespace MyGarageApi.Controllers
 {
@@ -39,7 +40,7 @@ namespace MyGarageApi.Controllers
         //GET CLIENTE POR DNI
         [Route("api/Client/{dni}")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Client>>> GetClient(string dni)
+        public async Task<ActionResult<Client>> GetClient(string dni)
         {
             try
             {
@@ -58,6 +59,28 @@ namespace MyGarageApi.Controllers
                 return BadRequest(new { Message = e.Message });
             }
 
+        }
+        //GET Contrasnya
+        [Route("api/verifica")]
+        [HttpPost]
+        public bool VerifyHash([FromBody] VerificaRequest verify)
+        {
+            var client = _context.Clients.Where(x => x.Dni == verify.Dni).FirstOrDefault();
+            if (client != null)
+            {
+                if (BCrypt.Net.BCrypt.Verify(verify.TextClar, client.Contrasenya))
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
         }
 
         //GET CLIENTE POR NOM
@@ -98,7 +121,7 @@ namespace MyGarageApi.Controllers
                 }
                 else
                 {
-                    return NotFound(new { Message = "Aquest nom no pertany a cap Client" });
+                    return NotFound(new { Message = "Aquest nom no pertany a cap Client." });
                 }
             }
             catch (Exception e)
@@ -129,7 +152,7 @@ namespace MyGarageApi.Controllers
                 }
                 else
                 {
-                    return NotFound(new { Message = "El DNI introduït no pertany a cap registre actual" });
+                    return NotFound(new { Message = "El DNI introduït no pertany a cap registre actual." });
                 }
             }
             catch (Exception e)
@@ -142,19 +165,19 @@ namespace MyGarageApi.Controllers
         //GET COTXES PER DNI DEL CLIENT
         [Route("api/CotxesClient/{dni}")]
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Client>>> GetCotxesClient(string dni)
+        public async Task<ActionResult<IEnumerable<Cotxe>>> GetCotxesClient(string dni)
         {
             try
             {
-                var client = await _context.Clients.FindAsync(dni);
-                if (client != null)
+                var cotxes = _context.Cotxes.Where(x => x.Dni == dni).ToList();
+                if (cotxes != null)
                 {
-                    var cotxes = _context.Cotxes.Where(x => x.Dni == dni).ToList();
+                   
                     return Ok(cotxes);
                 }
                 else
                 {
-                    return NotFound(new { Message = "El DNI introduït no pertany a cap registre actual" });
+                    return NotFound(new { Message = "El DNI introduït no pertany a cap registre actual." });
                 }
             }
             catch (Exception e)
@@ -163,6 +186,39 @@ namespace MyGarageApi.Controllers
             }
 
         }
+
+        //GET CLIENTS PER MARCA DE COTXE
+      [Route("api/ClientsMarca/{marca}")]
+[HttpGet]
+public async Task<ActionResult<IEnumerable<Client>>> GetClientsMarca(string marca)
+{
+    try
+    {
+        List<Client> cl = new List<Client>();
+        var cotxes = _context.Cotxes.Where(x => x.Marca == marca).ToList();
+
+        if (cotxes.Any())
+        {
+            foreach (var c in cotxes)
+            {
+                Client client = await _context.Clients.FindAsync(c.Dni);
+                if (client != null && !cl.Any(x => x.Dni == client.Dni)) 
+                {
+                    cl.Add(client);
+                }
+            }
+            return Ok(cl);
+        }
+        else
+        {
+            return NotFound(new { Message = "No s'han trobat cotxes amb aquesta marca." });
+        }
+    }
+    catch (Exception e)
+    {
+        return BadRequest(new { Message = e.Message });
+    }
+}
 
         //GET PRESSUPOST PER DNI DEL CLIENT
         [Route("api/Pressupost/{dni}")]
@@ -184,7 +240,7 @@ namespace MyGarageApi.Controllers
                 }
                 else
                 {
-                    return NotFound(new { Message = "El DNI introduït no pertany a cap registre actual" });
+                    return NotFound(new { Message = "El DNI introduït no pertany a cap registre actual." });
                 }
             }
             catch (Exception e)
@@ -267,16 +323,47 @@ namespace MyGarageApi.Controllers
         //AFEGIR CLIENT 
         [Route("api/postCliente")]
         [HttpPost]
-        public async Task<ActionResult<IEnumerable<Client>>> PostClient([FromBody]Client client)
+        public async Task<ActionResult<Client>> PostClient([FromBody]ClienteSuperficial client)
         {
             try
             {
+                if (client != null)
+                {
+                   
 
-                string hashedPassword = BCrypt.Net.BCrypt.HashPassword(client.Contrasenya);
-                client.Contrasenya = hashedPassword;
-                await _context.Clients.AddAsync(client);
-                await _context.SaveChangesAsync();
-                return Ok(new { Message = "Client afegit correctament" });
+                    if ( await _context.Clients.FindAsync(client.Dni)== null)
+                    {
+
+                        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(client.Contrasenya);
+                        client.Contrasenya = hashedPassword;
+                        DateTime fecha = DateTime.Now;
+                        DateOnly soloFecha = DateOnly.FromDateTime(client.DataNaixement);
+
+                        Client c = new Client()
+                        {
+                            Nom = client.Nom,
+                            Cognoms = client.Cognoms,
+                            Email = client.Email,
+                            Dni = client.Dni,
+                            Telefon = client.Telefon,
+                            Contrasenya = client.Contrasenya,
+                            DataNaixement = soloFecha,
+                            Notificacios = new List<Notificacio>(),
+                            Cotxes = new List<Cotxe>()
+                        };
+                        await _context.Clients.AddAsync(c);
+                        await _context.SaveChangesAsync();
+                        return Ok(client);
+                    }
+                    else
+                    {
+                        return NotFound(new { Message = "Aquest client ja existeix" });
+                    }
+                }
+                else
+                {
+                    return BadRequest(new { Message = "El client rebut es null " });
+                }
             }
             catch (Exception e)
             {
@@ -284,38 +371,74 @@ namespace MyGarageApi.Controllers
             }
         }
 
-        //AFEGIR CLIENT 
+        ////AFEGIR CLIENT 
         [Route("api/putCliente")]
         [HttpPut]
-        public async Task<IActionResult> UpdateClient(string dni, [FromBody] Client updatedClient)
+        public async Task<ActionResult<Client>> UpdateClient([FromBody]ClienteSuperficial updatedClient)
         {
-            if (dni != updatedClient.Dni)
+            try
             {
-                return BadRequest("DNI en la URL y en el cuerpo no coinciden.");
+                    Client client = await _context.Clients.FindAsync(updatedClient.Dni);
+
+                if (client != null)
+                {
+                    DateTime fecha = DateTime.Now;
+                    DateOnly soloFecha = DateOnly.FromDateTime(updatedClient.DataNaixement);
+
+                if (client.Contrasenya == updatedClient.Contrasenya)
+                {
+
+
+
+
+                        client.Nom = updatedClient.Nom;
+                        client.Cognoms = updatedClient.Cognoms;
+                        client.Email = updatedClient.Email;
+                        client.Dni = updatedClient.Dni;
+                        client.Telefon = updatedClient.Telefon;
+                        client.Contrasenya = updatedClient.Contrasenya;
+                        client.DataNaixement = soloFecha;
+                        client.Notificacios = client.Notificacios;
+                        client.Cotxes = client.Cotxes;  
+
+
+                        _context.Clients.Update(client);
+                        await _context.SaveChangesAsync();
+                        return Ok(new { Message = "Client actualitzat correctament" });
+                    }
+                    else
+                    {
+                      
+                        string hashedPassword = BCrypt.Net.BCrypt.HashPassword(updatedClient.Contrasenya);
+                        updatedClient.Contrasenya = hashedPassword;
+
+                        client.Nom = updatedClient.Nom;
+                        client.Cognoms = updatedClient.Cognoms;
+                        client.Email = updatedClient.Email;
+                        client.Dni = updatedClient.Dni;
+                        client.Telefon = updatedClient.Telefon;
+                        client.Contrasenya = hashedPassword;
+                        client.DataNaixement = soloFecha;
+                        client.Notificacios = client.Notificacios;
+                        client.Cotxes = client.Cotxes;
+
+
+                        _context.Clients.UpdateRange(client);
+                        await _context.SaveChangesAsync();
+                        return Ok(new { Message = "Client actualitzat correctament" });
+                    }
+                }
+                else
+                {
+                    return BadRequest(new { Message = "El client rebut es null " });
+                    
+                }
             }
-
-
-            var existingClient = await _context.Clients.FindAsync(dni);
-            if (existingClient == null)
+            catch (Exception e)
             {
-                return NotFound("Cliente no encontrado.");
+                return BadRequest();
             }
-
-           
-            existingClient.Nom = updatedClient.Nom;
-            existingClient.Cognoms = updatedClient.Cognoms;
-            existingClient.Email = updatedClient.Email;
-            existingClient.Telefon = updatedClient.Telefon;
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(updatedClient.Contrasenya);
-            existingClient.Contrasenya = hashedPassword;
-            existingClient.DataNaixement = updatedClient.DataNaixement;
-
-            await _context.SaveChangesAsync();
-
-            return NoContent();
         }
-
-
 
 
 

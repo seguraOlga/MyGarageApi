@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using MyGarageApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -22,6 +23,15 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles();
+
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(
+        Path.Combine(Directory.GetCurrentDirectory(),"wwwroot", "Imatges")),
+    RequestPath = "/Imatges"
+});
 
 app.UseAuthorization();
 

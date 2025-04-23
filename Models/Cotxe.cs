@@ -21,7 +21,7 @@ public partial class Cotxe
 
     public string? Bastidor { get; set; }
 
-    public byte[]? Imatge { get; set; }
+    public string? Imatge { get; set; }
 
     public virtual Client? DniNavigation { get; set; }
 
