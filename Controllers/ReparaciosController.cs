@@ -56,6 +56,33 @@ namespace MyGarageApi.Controllers
             }
         }
 
+        //GET REPARACIONS PER ID
+        [Route("api/GetReparacionsId/{id}")]
+        [HttpGet]
+        public async Task<ActionResult<Reparacio>> GetReparacionsPerId(int id)
+        {
+            try
+            {
+                Reparacio reparacio = await _context.Reparacios.Where(x => x.IdReparacio == id).FirstOrDefaultAsync();
+
+                if (reparacio == null)
+                {
+
+                    return Ok(new { Message = "No hi han reparacions amb aquesta Matricula" });
+                }
+                else
+                {
+                    return Ok(reparacio);
+                }
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new { Message = e.Message });
+
+
+            }
+        }
+
         //GET REPARACIONS PER MATRICULA
         [Route("api/GetReparacionsPerMatricula/{matricula}")]
         [HttpGet]
@@ -63,7 +90,7 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                var reparacions = _context.Reparacios.Where(x => x.Matricula == matricula).ToList();
+                var reparacions =  _context.Reparacios.Where(x => x.Matricula == matricula).ToList();
 
                 if (reparacions == null)
                 {
@@ -89,14 +116,30 @@ namespace MyGarageApi.Controllers
         //GET REPARACIONS PER MATRICULA
         [Route("api/Updatereparacio")]
         [HttpPut]
-        public async Task<IActionResult> PutReparacio([FromBody] Reparacio reparacio)
+        public async Task<IActionResult> PutReparacio([FromBody] ReparacioSuperficial reparacio)
         {
             try
             {
-                var rep = _context.Reparacios.Where(x => x.IdReparacio == reparacio.IdReparacio).FirstOrDefaultAsync();
+                Reparacio rep = await _context.Reparacios.Where(x => x.IdReparacio == reparacio.IdReparacio).FirstOrDefaultAsync();
                 if (rep != null)
                 {
-                    _context.Update(reparacio);
+
+                    rep.IdPressupost = reparacio.IdPressupost;
+                    rep.Estat = reparacio.Estat;
+                    rep.Factura = reparacio.Factura;
+                    rep.Matricula = reparacio.Matricula;
+                    rep.CostTreballador = (decimal?)reparacio.CostTreballador;
+                    rep.DataEntrada = DateOnly.FromDateTime(reparacio.DataEntrada);
+                    rep.DataSortida = reparacio.DataSortida.HasValue
+      ? DateOnly.FromDateTime(reparacio.DataSortida.Value)
+      : (DateOnly?)null;
+
+                    rep.ObservacionsClient = reparacio.ObservacionsClient;
+                    rep.ObservacionsMecanic = reparacio.ObservacionsMecanic;
+                    rep.Imatges = reparacio.Imatges;
+                    rep.HoresTreballades = (decimal?)reparacio.HoresTreballades;
+                    rep.MaterialReparacios = reparacio.MaterialReparacios;
+                    _context.Update(rep);
                     await _context.SaveChangesAsync();
                     return Ok(new { Message = "Reparació actualitzada correctament" });
                 }
@@ -111,28 +154,44 @@ namespace MyGarageApi.Controllers
             }
         }
 
-        // POST REPARACIO
         [Route("api/InsertReparacio")]
         [HttpPost]
-        public async Task<ActionResult<Reparacio>> PostReparacio([FromBody] Reparacio reparacio)
+        public async Task<ActionResult<Reparacio>> PostReparacio([FromBody] ReparacioSuperficial reparacio)
         {
             try
             {
-                var rep = await _context.Reparacios.FindAsync(reparacio.IdReparacio);
-                if (rep == null)
+                var cotxe = await _context.Cotxes.Where(x => x.Matricula == reparacio.Matricula).ToListAsync();
+                Reparacio rep = await _context.Reparacios.Where(x => x.IdReparacio == reparacio.IdReparacio).FirstOrDefaultAsync();
+                if (rep == null && cotxe!= null)
                 {
-                    _context.Reparacios.Add(reparacio);
+
+                    Reparacio repara = new Reparacio();
+                    repara.Estat = reparacio.Estat;
+                    repara.Factura = reparacio.Factura;
+                    repara.Matricula = reparacio.Matricula;
+                    repara.CostTreballador = (decimal?)reparacio.CostTreballador;
+                    repara.DataEntrada = DateOnly.FromDateTime(reparacio.DataEntrada);
+                    repara.DataSortida = reparacio.DataSortida.HasValue
+      ? DateOnly.FromDateTime(reparacio.DataSortida.Value)
+      : (DateOnly?)null;
+
+                    repara.ObservacionsClient = reparacio.ObservacionsClient;
+                    repara.ObservacionsMecanic = reparacio.ObservacionsMecanic;
+                    repara.Imatges = reparacio.Imatges;
+                    repara.HoresTreballades = (decimal?)reparacio.HoresTreballades;
+                    repara.MaterialReparacios = reparacio.MaterialReparacios;
+                    await _context.AddAsync(repara);
                     await _context.SaveChangesAsync();
                     return Ok(new { Message = "Reparació afegida correctament" });
                 }
                 else
                 {
-                    return NotFound(new { Message = "Reparació existent" });
+                    return NotFound(new { Message = "Aquesta reparacio ja existeix." });
                 }
             }
             catch (Exception e)
             {
-                return BadRequest(new { Message = "Error al actualitzar la reparació" });
+                return BadRequest(new { Message = "Error al afegir la reparació" });
             }
         }
 
@@ -143,7 +202,7 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                var reparacio = await _context.Reparacios.FindAsync(id);
+                var reparacio = await _context.Reparacios.Where(x=>x.IdReparacio == id).FirstOrDefaultAsync();
                 if (reparacio == null)
                 {
                     return NotFound(new { Message = "Aquesta reparació no existeix" });

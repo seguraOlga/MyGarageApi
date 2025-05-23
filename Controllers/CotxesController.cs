@@ -31,9 +31,9 @@ namespace MyGarageApi.Controllers
         [Route("api/CotxesMatricula/{matricula}")]
 
         [HttpGet]
-        public async Task<ActionResult<Cotxe>> GetCotxeMatricula(string id)
+        public async Task<ActionResult<Cotxe>> GetCotxeMatricula(string matricula)
         {
-            var cotxe = await _context.Cotxes.FindAsync(id);
+            var cotxe = await _context.Cotxes.FindAsync(matricula);
 
             if (cotxe == null)
             {
@@ -127,9 +127,7 @@ namespace MyGarageApi.Controllers
                 await file.CopyToAsync(stream);
             }
 
-            //var imageUrl =fileName;
-            return Ok(new { fileName = fileName });
-            //return Ok(fileName); 
+            return Content(fileName);
         }
 
 
@@ -227,18 +225,25 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                var cotxes = _context.Cotxes.Where(x => x.Matricula == cotxe.Matricula).ToList();
-                if (cotxes != null)
-                {
-                    _context.Cotxes.Add(cotxe);
-                    await _context.SaveChangesAsync();
-                }
-                else
+                var cotxeExist = await _context.Cotxes
+                    .FirstOrDefaultAsync(x => x.Matricula == cotxe.Matricula);
+
+                if (cotxeExist == null)
                 {
                     return NotFound(new { Message = "No s'ha trobat cap cotxe amb aquesta matrícula" });
                 }
 
-                return NoContent();
+                
+                cotxeExist.Marca = cotxe.Marca;
+                cotxeExist.Model = cotxe.Model;
+                cotxeExist.Carburant = cotxe.Carburant;
+                cotxeExist.Cilindrada = cotxe.Cilindrada;
+                cotxeExist.Bastidor = cotxe.Bastidor;
+                cotxeExist.DataFabricacio = cotxe.DataFabricacio;
+                cotxeExist.Dni = cotxe.Dni;
+
+                await _context.SaveChangesAsync();
+                return Ok("Cotxe actualitzar correctament.");
             }
             catch (Exception e)
             {

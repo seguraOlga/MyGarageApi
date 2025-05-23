@@ -39,7 +39,7 @@ namespace MyGarageApi.Controllers
         }
 
         // GET FACTURAS PER ID
-        [Route("api/GetFacturaIDa/{id}")]
+        [Route("api/GetFacturaID/{id}")]
         [HttpGet]
         public async Task<ActionResult<Factura>> GetFactura(int id)
         {
@@ -81,17 +81,24 @@ namespace MyGarageApi.Controllers
         // POST FACTURA
         [Route("api/InsertFactura")]
         [HttpPost]
-        public async Task<IActionResult> PostFactura([FromBody] Factura factura)
+        public async Task<IActionResult> PostFactura([FromBody] FacturaSupercifial facturas)
         {
             try
             {
-                var facturaDB = await _context.Facturas.FindAsync(factura.IdFactura);
-                if (factura != null)
+                var facturaDB = await _context.Facturas.Where(x=>x.IdFactura == facturas.IdFactura).FirstOrDefaultAsync();
+                if (facturaDB != null)
                 {
                     return NotFound(new { Message = "La factura introduïda ja existeix" });
                 }
                 else
                 {
+                    Factura factura = new Factura
+                    {
+                        IdReparacio = facturas.IdReparacio,
+                        Data = DateOnly.FromDateTime(facturas.Data), 
+                        PreuTotal = facturas.PreuTotal
+
+                    };
                     await _context.Facturas.AddAsync(factura);
                     await _context.SaveChangesAsync();
                     return Ok(factura);

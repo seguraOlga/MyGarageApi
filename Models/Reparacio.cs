@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
 
 namespace MyGarageApi.Models;
 
 public partial class Reparacio
 {
+    [Key]
+    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public int IdReparacio { get; set; }
 
     public int? IdPressupost { get; set; }
 
+    [Required]
     public string? Matricula { get; set; }
 
     public decimal? CostTreballador { get; set; }
@@ -25,7 +30,7 @@ public partial class Reparacio
 
     public string? ObservacionsMecanic { get; set; }
 
-    public byte[]? Imatges { get; set; }
+    public string? Imatges { get; set; }
 
     public virtual Factura? Factura { get; set; }
 

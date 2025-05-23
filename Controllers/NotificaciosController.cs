@@ -58,8 +58,13 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                
-                _context.Notificacios.Add(notificacio);
+                Notificacio noti = new Notificacio();
+                noti.Titol = notificacio.Titol;
+                noti.Missatge = notificacio.Missatge;
+                noti.DniClient = notificacio.DniClient;
+                noti.DataEnvio = DateTime.Now;
+
+                _context.Notificacios.Add(noti);
                 await _context.SaveChangesAsync();
 
                 return Ok(new { Message = "Notificació afegida correctament" });

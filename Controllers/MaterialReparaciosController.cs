@@ -43,6 +43,25 @@ namespace MyGarageApi.Controllers
             return materialReparacio;
         }
 
+        //GET /api/MaterialsPerReparacio/{idReparacio}
+        [Route("api/MaterialsPerReparacio/{idReparacio}")]
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<MaterialReparacio>>> GetMaterialsPerReparacio(int idReparacio)
+        {
+            var materials = await _context.MaterialReparacios
+                .Where(m => m.IdReparacio == idReparacio)
+                .Include(m => m.RefPecaNavigation)
+                .ToListAsync();
+
+            if (materials == null || !materials.Any())
+            {
+                return NotFound();
+            }
+
+            return Ok(materials);
+        }
+
+
         //PUT
         [Route("api/PutMaterial")]
         [HttpPut]

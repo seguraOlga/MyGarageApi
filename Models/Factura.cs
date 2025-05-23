@@ -14,4 +14,7 @@ public partial class Factura
     public decimal? PreuTotal { get; set; }
 
     public virtual Reparacio? IdReparacioNavigation { get; set; }
+
+    public string? RutaPdf { get; set; }
+
 }

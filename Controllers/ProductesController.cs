@@ -51,6 +51,34 @@ namespace MyGarageApi.Controllers
 
         }
 
+        // GET /api/ProductesId/{id}
+        [Route("api/ProductesId/{id}")]
+        [HttpGet]
+        public async Task<ActionResult<Producte>> GetProductePerId(int id)
+        {
+            try
+            {
+                var producte = await _context.Productes.FirstOrDefaultAsync(x => x.RefPeca == id);
+
+                if (producte == null)
+                {
+                    return NotFound(new { Message = "No s'ha trobat cap producte amb aquest ID" });
+                }
+                else
+                {
+                    return Ok(producte);
+                }
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new { Message = e.Message });
+            }
+        }
+
+
+
+
+
         // GET 
         [Route("api/ProductesPart/{part}")]
         [HttpGet]
@@ -124,7 +152,7 @@ namespace MyGarageApi.Controllers
             }
             catch (Exception e)
             {
-                return BadRequest(new { Message = e.Message });
+                return BadRequest();
             }
         }
         //POST PRODUCTE
@@ -134,8 +162,8 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                var producteDB = _context.Productes.Where(x => x.RefPeca == producte.RefPeca).FirstOrDefault();
-                if (producteDB.RefPeca == null)
+                var producteDB = await _context.Productes.FindAsync(producte.RefPeca);
+                if (producteDB == null)
                 {
                     _context.Productes.Add(producte);
                     await _context.SaveChangesAsync();
@@ -159,7 +187,7 @@ namespace MyGarageApi.Controllers
         {
             try
             {
-                var poducte = await _context.Productes.FindAsync(id);
+                var poducte = await _context.Productes.Where(x => x.RefPeca == id).FirstOrDefaultAsync(); 
                 if (poducte == null)
                 {
                     return NotFound();
@@ -177,6 +205,37 @@ namespace MyGarageApi.Controllers
             {
                 return BadRequest(new { Message = e.Message });
             }
+        }
+
+        //SUBIR FOTO COCHE A LA API DEVUELVE EL FILENAME
+        [Route("api/Producte/penjarFoto")]
+        [HttpPost]
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> PenjarFoto([FromForm] UploadImageRequest request)
+        {
+            var file = request.File;
+
+            if (file == null || file.Length == 0)
+                return BadRequest("No s'ha seleccionat cap imatge.");
+
+            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+
+            var wwwRootPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var imagesPath = Path.Combine(wwwRootPath, "Imatges");
+
+            if (!Directory.Exists(imagesPath))
+                Directory.CreateDirectory(imagesPath);
+
+            var fullPath = Path.Combine(imagesPath, fileName);
+
+            using (var stream = new FileStream(fullPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            //var imageUrl =fileName;
+            return Ok(new { fileName = fileName });
+            //return Ok(fileName); 
         }
 
     }

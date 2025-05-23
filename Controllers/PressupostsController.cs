@@ -33,8 +33,15 @@ namespace MyGarageApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Pressupost>>> GetPressupostsPerData()
         {
-            var pressuposts = await _context.Pressuposts.OrderBy(x => x.DataPressupost).ToListAsync();
-            return Ok(pressuposts);
+            try
+            {
+                var pressuposts = await _context.Pressuposts.OrderBy(x => x.DataPressupost).ToListAsync();
+                return Ok(pressuposts);
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new { Message = "Error" + e });
+            }
         }
 
         // GET PER  ESTAT
@@ -49,6 +56,31 @@ namespace MyGarageApi.Controllers
                 if (pressupost == null)
                 {
                     return NotFound(new { Message = "No s'han trobat pressuposts amb aquest estat " });
+                }
+                else
+                {
+                    return Ok(pressupost);
+                }
+            }
+            catch (Exception e)
+            {
+                return BadRequest(new { Message = e.Message });
+
+            }
+        }
+
+        // GET PER  ESTAT
+        [Route("api/GetPressupostsMatricula/{matricula}")]
+        [HttpGet]
+        public async Task<ActionResult<Pressupost>> GetPressupostPerMatricula(string matricula)
+        {
+            try
+            {
+                var pressupost = _context.Pressuposts.Where(x => x.Matricula == matricula).ToList();
+
+                if (pressupost == null)
+                {
+                    return NotFound(new { Message = "No s'han trobat pressuposts amb aquesta Matricula " });
                 }
                 else
                 {
@@ -92,22 +124,31 @@ namespace MyGarageApi.Controllers
         // POST PRESSUPOST
         [Route("api/PostPressuposts")]
         [HttpPost]
-        public async Task<ActionResult<Pressupost>> PostPressupost(Pressupost pressupost)
+        public async Task<ActionResult<Pressupost>> PostPressupost([FromBody] PressupostSuperficial pressupost)
         {
             try
             {
 
-                var pressupostDB = _context.Pressuposts.Find(pressupost.IdPressupost);
+                var pressupostDB = await _context.Pressuposts.Where(x=>x.IdPressupost == pressupost.IdPressupost).FirstOrDefaultAsync();
 
-                if (pressupostDB.IdPressupost != null)
+
+                if (pressupostDB == null)
                 {
-                    return BadRequest(new { Message = "Aquest Pressupost ya existeix" });
+                    Pressupost presu = new Pressupost();
+                    presu.PreuTotal = (decimal?)pressupost.PreuTotal;
+                    presu.DataPressupost = DateOnly.FromDateTime(DateTime.Now);
+                    presu.MotiuReparacio = pressupost.MotiuReparacio;
+                    presu.Matricula = pressupost.Matricula;
+                    presu.CostTreballador = (decimal?)pressupost.CostTreballador;
+                    presu.Estat = pressupost.Estat;
+                    presu.Imatges = pressupost.Imatges;
+                    await _context.Pressuposts.AddAsync(presu);
+                    await _context.SaveChangesAsync();
+                    return Ok(new { Message = "Pressupost creat correctament" });
                 }
                 else
                 {
-                    await _context.Pressuposts.AddAsync(pressupost);
-                    await _context.SaveChangesAsync();
-                    return Ok(new { Message = "Pressupost creat correctament" });
+                    return BadRequest(new {Message="Hi ha hagut algún problema amb el pressupost." });
                 }
 
             }

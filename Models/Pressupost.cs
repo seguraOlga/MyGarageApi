@@ -17,7 +17,7 @@ public partial class Pressupost
 
     public string? Estat { get; set; }
 
-    public byte[]? Imatges { get; set; }
+    public string? Imatges { get; set; }
 
     public virtual Reparacio? Reparacio { get; set; }
     public string Matricula { get; internal set; }
